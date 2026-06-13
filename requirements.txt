@@ -1,12 +1,7 @@
 matplotlib
-pathlib
-scikit-learn
-seaborn
-statsmodels
-sympy
-tabulate
 numpy
 pandas
-matplotlib
+scikit-learn
 scipy
-
+seaborn
+ipywidgets

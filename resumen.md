@@ -1,267 +1,97 @@
 # Resumen del proyecto
 
-Este archivo guarda la memoria practica del trabajo realizado para continuar el
-proyecto en otro entorno o con otro agente.
+Memoria practica para continuar el proyecto en otro entorno o con otro agente.
+Leer primero `README.md`, `AGENTS.md` y este archivo, luego `MachenLearning.ipynb`.
 
-Ultima actualizacion de memoria: 2026-05-26.
-
-Si este proyecto se abre en otro PC, leer primero:
-
-1. `README.md`
-2. `AGENTS.md`
-3. `resumen.md`
-4. `MachenLearning.ipynb`
-
-No depender de rutas absolutas del equipo anterior. Trabajar siempre desde la
-raiz del proyecto y validar que exista la carpeta `Material de apoyo/`.
+Ultima actualizacion: 2026-06-12 (v5, Parcial 4).
 
 ## Proyecto
 
-- Notebook principal: `MachenLearning.ipynb`.
-- Dataset principal: CSV de rondas de CS:GO cargado desde GitHub.
-- Carpeta de referencia: `Material de apoyo/`.
-- Metodologia obligatoria: CRISP-DM.
-- Idioma del notebook: espanol.
+- Notebook principal: `MachenLearning.ipynb` (CRISP-DM Fases 1 a 6).
+- Dataset: rondas de CS:GO cargado desde GitHub (CSV, sep `;`).
+- Metodologia: CRISP-DM. Idioma: espanol. Unidad de analisis: equipo-ronda.
+- Entrega vigente: **Parcial 4 - Modelos de Clasificacion** (grupal, con
+  presentacion, 30% de la nota).
 
-## Instrucciones del usuario
+## Que cubre la entrega Parcial 4
 
-El usuario pidio:
+- **Fase 4 (Modeling):** 4.1 regresion (iteracion Parcial 3) y 4.2 clasificacion
+  (tarea principal). Cada tarea con baseline + 3 modelos + metricas.
+- **Fase 5 (Evaluation):** lectura de negocio del clasificador ganador (matriz de
+  confusion, ROC-AUC, importancia de variables).
+- **Fase 6 (Deployment):** `pickle` en la carpeta `modelos/` (un .pkl por modelo,
+  nombre por tarea+algoritmo) + formulario interactivo `ipywidgets` que carga el
+  ganador para predecir un registro nuevo.
 
-- Actuar como Senior Data Scientist experto en Machine Learning.
-- Seguir estrictamente CRISP-DM.
-- Basar decisiones en el material de apoyo y rubricas.
-- Usar Markdown antes del codigo para justificar decisiones.
-- Usar Markdown despues de tablas/graficos para interpretar.
-- Evitar celdas largas y codigo mezclado.
-- Mantener todo muy trazable.
-- Separar claramente `X` e `y`.
-- Analizar nulos, outliers, distribuciones y correlaciones.
-- Advertir fuga de informacion.
-- Codificar categoricas antes de modelar.
-- Escalar numericas solo si corresponde.
-- Mantener variables originales para auditoria.
-- Usar variables temporales por periodo, no promedios globales sin contexto.
-- Usar visualizaciones territoriales/geograficas cuando aplique.
-- En nombres visibles de modelos, incluir tipo/subtipo y fecha/hora.
-- No crear apartados innecesarios solo para el timestamp del modelo.
-- No modificar el dataset original.
-- Si algo no esta alineado con la rubrica, decirlo de forma clara.
-- Si una mejora no funciona, comprobar que falta y comentarlo.
-- Mantener Fase 2 cargada de graficos; en Fase 3 y Fase 4 usar graficos solo de
-  preparacion, control y evaluacion.
+## Tarea de clasificacion (principal)
 
-## Problematica actual
+- Target: `RoundWinnerNum` (`1` gana, `0` pierde). Balance ~50/50.
+- Features: contexto (`Map`, `Team`, `InvestmentLevel`), momento (`RoundId`,
+  `HasPreviousRound`), composicion de armas e historial pre-ronda (`Prev*`,
+  `Rolling*`, incluidos `PrevRoundWin`, `PrevRoundKills`, `RollingKillsLast3`).
+  Todo con `shift(1)`.
+- Split por `MatchId` (`GroupShuffleSplit`). Preprocesamiento con `Pipeline` +
+  `ColumnTransformer` (mediana + IQR Capping + `RobustScaler`; moda +
+  `OneHotEncoder`).
+- Modelos: `KNeighborsClassifier`, `RandomForestClassifier`, `SVC` (SVM, RBF) y un
+  **ensamble por voto suave** (`VotingClassifier`). Baseline:
+  `DummyClassifier(most_frequent)`. Cada modelo optimizado con `GridSearchCV` +
+  `GroupKFold` (4.2.3) + metodo del codo para KNN. KNN y SVM dependen del escalado.
+- Metricas: accuracy, precision, recall, F1, ROC-AUC (train y test) + matriz de
+  confusion, ROC y Precision-Recall, con graficos de diagnostico por modelo.
 
-Los equipos de CS:GO deben decidir antes o al inicio de una ronda si compran,
-fuerzan o ahorran. Esa decision se toma con incertidumbre. Invertir mas no
-garantiza ganar, porque tambien influyen mapa, bando, rival, composicion de
-armas e historial reciente.
+Resultados (test): mejor modelo **Ensamble por voto suave**, ROC-AUC ~0.792,
+accuracy ~0.698 (RF 0.788, KNN 0.786, SVM 0.776). El ensamble mejora marginalmente
+a los individuales: la clasificacion esta en su **techo predictivo (~0.79
+ROC-AUC)**, el tuning/escalado/features/ensamble no lo superan de forma drastica
+(verificado). Supera con claridad al baseline. Nota: el ensamble pesa ~63 MB en
+`.pkl`; el RF individual (~27 MB) es casi equivalente.
 
-El foco de negocio es apoyar decisiones estrategicas de compra y gestion de
-recursos.
+## Tarea de regresion (iteracion Parcial 3, seccion 4.1)
 
-## Fase 1
+- Target: `EquipmentAdvantage = TeamStartingEquipmentValue - OpponentEquipmentValue`.
+- **Control de fuga:** las predictoras se restringen a contexto + historial
+  pre-ronda (`reg_categorical_features`, `reg_numeric_features`). Se EXCLUYEN las
+  variables derivadas de la economia/composicion de la ronda actual
+  (`LogEquipmentRatio`, `EquipmentSpread`, `*Share`, `*Delta*`, `InvestmentLevel`).
+  Se INCLUYEN `PrevRoundWin` (resultado de la ronda anterior) y el historial de
+  bajas (`PrevRoundKills`, `RollingKillsLast3`), predictores clave.
+- Modelos: `LinearRegression`, `RandomForestRegressor`, `SVR`. Baseline:
+  `DummyRegressor(median)`. Cada modelo optimizado con `GridSearchCV`. El SVR usa
+  `TransformedTargetRegressor`(`StandardScaler`) para escalar el target.
+- Resultado (test): Random Forest **R2 ~0.74** (MAE ~5300), SVR **R2 ~0.71**,
+  lineal ~0.47. Sin fuga. Una version anterior inflaba el R2 a ~0.99 por incluir
+  variables derivadas del propio target; eso quedo corregido.
 
-La Fase 1 fue ajustada para que no hable solo de clasificacion. Ahora reconoce:
+## Decisiones de diseno tomadas
 
-- Problema principal: apoyar decisiones de compra.
-- Clasificacion: estimar victoria/derrota con `RoundWinner_Num`.
-- Regresion: estimar una medida numerica complementaria de desempeno.
+- Conservar regresion (Parcial 3) y clasificacion (Parcial 4) en secciones
+  separadas y limpias dentro de la Fase 4.
+- Target de clasificacion: `RoundWinnerNum` (no se cambio).
+- Deployment con `pickle` + formulario `ipywidgets` dentro del notebook.
+- La Fase 4 estaba duplicada; se consolido en una sola con numeracion unica.
 
-Estado: alineada con Fase 3 y Fase 4.
+## Trabajo pendiente / ideas
 
-## Fase 2
+- Hecho: cada modelo (reg y clf) se optimiza con `GridSearchCV` + `GroupKFold`
+  (4.1.2 / 4.2.3). La Fase 5 agrega overfitting (train vs test), matrices/ROC
+  comparadas, residuos, curvas de aprendizaje e importancia de variables.
+- Opcional: si se amplia el deployment, exponer una app Flask (material 4.3.3).
+- Opcional: `XGBoost`/`LightGBM` o `CalibratedClassifierCV` podrian aranar
+  decimas en clasificacion, pero no romperan el techo ~0.79.
+- La Fase 3 conserva una doble definicion historica de `crear_preprocesador`
+  (celda simple shadow + celda IQR); funciona, pero podria unificarse.
 
-Contiene analisis exploratorio amplio:
-
-- Estructura del dataset.
-- Tipos de datos.
-- Nulos.
-- Outliers.
-- Duplicidad.
-- Distribuciones.
-- Analisis por mapa.
-- Analisis por bando.
-- Variables temporales/periodos.
-- Correlaciones.
-- Lecturas de negocio.
-
-Estado: desarrollada, aunque puede pulirse redaccion si se cambia el foco final
-de regresion.
-
-## Fase 3
-
-Transforma de jugador-ronda a equipo-ronda.
-
-Pasos principales:
-
-- Limpieza de `RoundWinner`.
-- Creacion de `RoundWinner_Num`.
-- Conversion de `TimeAlive` a `TimeAlive_Sec`.
-- Agregacion por `MatchId`, `RoundId`, `Map`, `Team`.
-- Creacion de `AvgTeamTimeAliveSec`.
-- Variables de economia propia/rival.
-- Variables de armas.
-- Variables temporales pre-ronda con `shift`.
-- Separacion de predictoras y targets.
-- Pipeline con imputacion, IQR capping, encoding y `RobustScaler`.
-- Split por partida usando `GroupShuffleSplit`.
-
-Features actuales antes de encoding:
-
-- 3 categoricas.
-- 13 numericas base.
-- 11 temporales pre-ronda.
-- Total: 27 predictoras antes de encoding.
-- Total despues de encoding: 30 columnas.
-
-## Fase 4 actual
-
-Se desarrollo la subseccion de regresion.
-
-Target actual:
-
-- `AvgTeamTimeAliveSec`.
-
-Modelos:
-
-- Baseline con `DummyRegressor`.
-- Regresion lineal.
-- Arbol de decision.
-- Random Forest.
-
-Metricas:
-
-- `MAE`.
-- `MSE`.
-- `RMSE`.
-- `R2`.
-
-Ultimos resultados validados:
-
-| Modelo | MAE_test | RMSE_test | R2_test |
-| :--- | ---: | ---: | ---: |
-| Regresion lineal | 24.7258 | 34.6166 | -0.0119 |
-| Random Forest | 24.8441 | 34.9418 | -0.0310 |
-| Arbol de decision | 24.9528 | 35.3668 | -0.0563 |
-| Baseline mediana | 21.6552 | 37.5588 | -0.1913 |
-
-Lectura:
-
-- La regresion lineal mejora el RMSE frente al baseline.
-- No mejora el MAE frente al baseline.
-- `R2_test` sigue negativo.
-- El modelo funciona parcialmente, pero no es predictivamente fuerte.
-
-Graficos agregados despues de la preocupacion del usuario:
-
-- Fase 3:
-  - distribucion de targets y familias de predictoras;
-  - outliers principales antes del tratamiento;
-  - validacion visual del split.
-- Fase 4:
-  - comparacion grafica de `RMSE_test`, `MAE_test`, `R2_test`;
-  - real vs predicho;
-  - residuos;
-  - importancia de variables en Random Forest.
-
-## Verificaciones adicionales hechas por chat
-
-Se probaron alternativas fuera del notebook para analizar cambio de target.
-
-Resultados aproximados:
-
-- `AvgTeamTimeAliveSec`: debil, `R2 < 0`.
-- `TeamRoundKills`: mejor, `R2` cercano a 0.37 y mejora de RMSE cercana a 21%.
-- `TeamStartingEquipmentValue` usando solo contexto e historial previo:
-  `R2` cercano a 0.65 y mejora de RMSE cercana a 41%.
-- `TeamStartingEquipmentValue` usando variables de compra actual: casi perfecto,
-  pero invalido por fuga/circularidad.
-- `EquipmentSpread` y `AvgPlayerEquipmentValue` tambien pueden dar metricas casi
-  perfectas si se usan variables relacionadas directamente, pero eso no es
-  metodologicamente valido.
-
-## Discusion pendiente
-
-El usuario quiere un enfoque completamente predictivo. La preocupacion es que
-`AvgTeamTimeAliveSec` no esta entregando un modelo suficientemente fuerte.
-
-Opciones viables:
-
-1. Mantener `AvgTeamTimeAliveSec`.
-   - Ventaja: target numerico continuo, mas seguro para rubrica.
-   - Desventaja: bajo poder predictivo.
-
-2. Cambiar a `TeamRoundKills`.
-   - Ventaja: mas predictivo y conectado con desempeno ofensivo.
-   - Desventaja: es conteo discreto, no continuo puro.
-
-3. Cambiar a `TeamStartingEquipmentValue` con features solo historicas y de
-   contexto.
-   - Ventaja: fuerte predictivamente.
-   - Desventaja: cambia el foco a economia esperada, no desempeno competitivo.
-
-Recomendacion actual:
-
-- Si se prioriza rubrica de regresion continua: mantener `AvgTeamTimeAliveSec` y
-  explicar limitaciones.
-- Si se prioriza poder predictivo y negocio ofensivo: cambiar a `TeamRoundKills`
-  y justificarlo como variable numerica de impacto esperado.
-- Si se reformula el negocio hacia anticipar economia: usar
-  `TeamStartingEquipmentValue` con cuidado para evitar circularidad.
-
-## Revision contra rubrica
-
-Estado claro:
-
-- Fase 1: alineada.
-- Fase 2: alineada y visualmente fuerte.
-- Fase 3: alineada, con preparacion, variables, encoding, scaling, split y
-  control de fuga.
-- Fase 4: alineada en regresion, tres modelos y metricas, pero el target actual
-  no es predictivamente fuerte.
-- Fase 5 Evaluation: falta desarrollarla formalmente.
-- Deployment: falta desarrollarlo formalmente.
-- El notebook tiene placeholder `## Fase 5: Deployment`; debe corregirse a
-  `## Fase 6: Deployment` para CRISP-DM estricto.
-
-Segun la rubrica de Parcial 3, para cierre final falta:
-
-- evaluacion final de modelos de regresion;
-- justificacion definitiva del mejor modelo;
-- explicacion de combinacion de features;
-- deployment/formulario de prediccion;
-- notebook ejecutado y sin errores.
-
-## Siguiente paso sugerido
-
-Antes de seguir con clasificacion o evaluation, decidir target final de
-regresion.
-
-Si se cambia el target, ajustar:
-
-- Fase 1: objetivo e hipotesis.
-- Fase 3: tabla de targets, features y conclusiones.
-- Fase 4: baseline, modelos, metricas, analisis y graficos.
-- Fase 5: evaluacion final.
-
-Si no se cambia el target, el siguiente paso es desarrollar Fase 5 con una
-conclusion honesta: `AvgTeamTimeAliveSec` cumple con regresion continua, pero el
-modelo tiene poder predictivo limitado. En ese caso, la utilidad principal del
-proyecto deberia apoyarse mas en clasificacion o en decision de compra.
-
-Si se cambia el target, hacerlo en cadena:
-
-1. Reescribir objetivo de regresion en Fase 1.
-2. Cambiar tabla de targets en Fase 3.
-3. Ajustar features para evitar fuga.
-4. Reentrenar Fase 4.
-5. Volver a ejecutar el notebook completo.
-
-## Comando de validacion
+## Validacion
 
 ```bash
-python -m jupyter nbconvert --to notebook --execute MachenLearning.ipynb --inplace --ExecutePreprocessor.timeout=900
+python -m nbconvert --to notebook --execute MachenLearning.ipynb --inplace --ExecutePreprocessor.timeout=1800
 ```
 
-Ultima ejecucion completa del notebook: sin errores.
+Ultima ejecucion: `n_errors = 0`, notebook completo, carpeta `modelos/` generada
+con todos los modelos y el ganador verificado contra el pipeline en memoria.
+
+Nota tecnica: la optimizacion (`GridSearchCV`, `cross_val_score`, `VotingClassifier`,
+`learning_curve`) usa `n_jobs=1` para evitar un fallo intermitente de joblib/loky
+en Windows (limpieza de memmap) durante `nbconvert`. Los `RandomForest` mantienen
+`n_jobs=-1` internamente (hilos, sin ese problema).
