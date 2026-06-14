@@ -3,7 +3,15 @@
 Memoria practica para continuar el proyecto en otro entorno o con otro agente.
 Leer primero `README.md`, `AGENTS.md` y este archivo, luego `MachenLearning.ipynb`.
 
-Ultima actualizacion: 2026-06-12 (v5, Parcial 4).
+Ultima actualizacion: 2026-06-13 (v6, Parcial 4).
+
+> **Correccion de datos importante:** la columna `RoundWinner` del dataset venia
+> **invertida** (los registros marcados `True` matan menos -0.43 vs 0.91- y
+> sobreviven menos -23% vs 58%-, es decir eran los **perdedores**). Se corrige en
+> la celda de carga (`RoundWinner` -> `True` = gano). Esto NO cambia la magnitud de
+> las metricas del modelo, pero corrige toda la interpretacion: con la etiqueta
+> arreglada, mas economia/kills -> mas victorias (intuitivo), y el bando fuerte es
+> `CounterTerrorist` (~57,6%), no `Terrorist`. No revertir este fix.
 
 ## Proyecto
 

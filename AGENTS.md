@@ -47,6 +47,9 @@ Unidad de analisis: **equipo-ronda**.
 **Clasificacion (tarea principal Parcial 4):**
 
 - Target: `RoundWinnerNum` (`1` gana, `0` pierde la ronda). Balance ~50/50.
+  **Importante:** la columna `RoundWinner` del dataset venia INVERTIDA (los `True`
+  eran los perdedores, verificado con kills y supervivencia); se corrige en la
+  celda de carga (`True` = gano). No revertir ese fix.
 - Predictoras: contexto (`Map`, `Team`, `InvestmentLevel`), momento (`RoundId`,
   `HasPreviousRound`) e historial pre-ronda (`Prev*`, `Rolling*`) + composicion
   de armas. Toda variable historica usa `shift(1)`.
