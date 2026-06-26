@@ -17,22 +17,23 @@ entregas).
 ```
 MachenFundaments/
 ├── MachenLearning.ipynb     # Notebook principal (CRISP-DM Fases 1-6)
-├── demo.py                  # Demo por consola: carga el modelo y predice casos reales
 ├── README.md                # Esta portada
 ├── AGENTS.md                # Guia para continuar con otra IA/agente
 ├── resumen.md               # Memoria del estado y decisiones
 ├── requirements.txt         # Dependencias
-├── modelos/                 # Modelos de clasificacion (.pkl) + ejemplos.csv (Fase 6)
+├── limpiar_modelos.cmd      # Borra los .pkl de modelos/ (liberar espacio)
+├── modelos/                 # Modelos de clasificacion (.pkl), generados en la Fase 6
 ├── enunciados/              # PDFs de la evaluacion (Parcial 4 y encargo)
 └── Material de apoyo/       # Clases, rubricas y ejemplos del curso (no se modifica)
 ```
 
 La carpeta `modelos/` se genera en la Fase 6 con un `.pkl` por modelo de
 clasificacion (`clasificacion_knn`, `clasificacion_random_forest`,
-`clasificacion_svm`, `clasificacion_ensamble_voto_suave`) mas `ejemplos.csv`
-(casos reales para la demo). El ganador (el ensamble) es el que carga el
-formulario. El modelo de regresion no se serializa por su tamano (arboles sin
-podar); se reproduce ejecutando la Fase 4.1.
+`clasificacion_svm`, `clasificacion_ensamble_voto_suave`). El ganador (el
+ensamble) es el que se recarga y usa en la demo y el formulario. El modelo de
+regresion no se serializa por su tamano (arboles sin podar); se reproduce
+ejecutando la Fase 4.1. Para borrar los `.pkl` y liberar espacio se ejecuta
+`limpiar_modelos.cmd`.
 
 ---
 
@@ -63,13 +64,13 @@ podar); se reproduce ejecutando la Fase 4.1.
 
 ## Demostracion (mostrar que el modelo funciona)
 
-- **Por consola:** `python demo.py` carga el modelo ganador desde `modelos/` y
-  (1) predice sobre **casos reales** del conjunto de prueba mostrando las
-  variables de entrada y revelando el resultado real *despues* de predecir, y
-  (2) varia una entrada para evidenciar que la prediccion **responde** a los
-  datos (no copia la respuesta).
-- **En el notebook:** la **Fase 6.4** repite la demo con casos reales y la
-  **Fase 6.3** ofrece un formulario interactivo (`ipywidgets`).
+La demostracion esta **integrada en el notebook** (Fase 6), reutilizando el
+modelo recargado desde el `.pkl` y los datos ya en memoria:
+
+- **Fase 6.4** predice sobre **6 rondas aleatorias** del conjunto de prueba
+  (cambian en cada ejecucion) y compara el resultado real con la prediccion.
+- **Fase 6.3** ofrece un **formulario interactivo** (`ipywidgets`): se cambia una
+  entrada y la prediccion responde en vivo.
 
 ---
 
